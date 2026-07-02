@@ -95,4 +95,4 @@ The pattern is bigger than any one tool. Karpathy's [original idea file](https:/
 - Pattern: [Andrej Karpathy's LLM-Wiki idea](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 - Lineage: Vannevar Bush's Memex (1945)
 
-MIT licensed. Built by [Blaze Malan](https://github.com/blazemalan), generalized from the vault he runs daily.
+MIT licensed. Built by [Blaze Malan](https://www.linkedin.com/in/blazemalan/), generalized from the vault he runs daily.
