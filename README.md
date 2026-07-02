@@ -1,4 +1,4 @@
-# Trailblaze
+# Trailblaze -- Second Brain
 
 **Your second brain: a personal wiki that an AI agent builds and maintains for you.**
 
