@@ -1,0 +1,13 @@
+{
+  "name": "trailblaze",
+  "displayName": "Trailblaze",
+  "version": "0.1.0",
+  "description": "Your second brain: an LLM-maintained personal wiki based on Andrej Karpathy's LLM-Wiki pattern. One skill scaffolds the vault; ingest, query, and vault-lint keep it compounding.",
+  "author": {
+    "name": "Blaze Malan",
+    "url": "https://github.com/blazemalan"
+  },
+  "repository": "https://github.com/blazemalan/trailblaze",
+  "license": "MIT",
+  "keywords": ["second-brain", "knowledge-base", "obsidian", "wiki", "notes", "pkm", "karpathy", "llm-wiki"]
+}

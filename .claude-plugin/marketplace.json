@@ -1,0 +1,17 @@
+{
+  "name": "trailblaze",
+  "owner": {
+    "name": "Blaze Malan"
+  },
+  "description": "Trailblaze: build and run a second brain (LLM-maintained personal wiki).",
+  "plugins": [
+    {
+      "name": "trailblaze",
+      "source": "./",
+      "displayName": "Trailblaze",
+      "description": "Your second brain: an LLM-maintained personal wiki based on Andrej Karpathy's LLM-Wiki pattern. One skill scaffolds the vault; ingest, query, and vault-lint keep it compounding.",
+      "category": "productivity",
+      "tags": ["second-brain", "knowledge-base", "obsidian", "wiki", "pkm"]
+    }
+  ]
+}
