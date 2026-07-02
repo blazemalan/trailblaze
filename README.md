@@ -37,8 +37,6 @@ Trailblaze works in the Claude apps (web chat, Claude Desktop, and Claude Cowork
 /plugin install trailblaze@trailblaze
 ```
 
-Note: if this repository is private, installing from the marketplace requires access to it. No access? Ask the owner for the plugin as a zip and use the upload option instead.
-
 ## Quickstart
 
 1. Create an empty folder where your second brain should live (for example `~/second-brain`) and open a Claude session there (in Cowork or Claude Code, work in that folder).
