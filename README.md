@@ -61,7 +61,19 @@ Then the everyday rhythm:
 | `query` | Wiki-first answers with `[[wikilink]]` citations. Deterministic search and backlink scripts run before any expensive reading |
 | `vault-lint` | Tiered health check (quick / standard / deep). Report-first; fixes only run when you say so |
 
-The ingest and lint skills ship with Python helper scripts (triage, index generation, search, backlinks, a lint resolver) that do the mechanical work deterministically and cheaply. They need a surface that can run Python (Claude Cowork, Claude Desktop, or Claude Code); in plain web chat the skills still work, the agent just does those steps manually.
+## Why this stays cheap
+
+Most agent-maintained knowledge bases die of token cost: the agent re-reads everything, appends forever, and every month the system gets slower and more expensive. Trailblaze ports the cost discipline from a production vault that runs this pattern daily:
+
+- **Scripts before tokens.** Bundled Python does the mechanical work for free. `triage.py` classifies every raw file (empty recording? duplicate? already filed?) before the agent reads a single line. `search.py` and `backlinks.py` pick the candidate pages before any reading happens. The lint resolver runs six of the eleven health checks with zero model involvement.
+- **Questions hit the wiki, not the raw pile.** The wiki is the compressed, already-cross-referenced answer, so a typical query costs a few thousand tokens instead of a hundred thousand. Raw transcripts are a last resort, and needing one is treated as a signal that the wiki has a gap to fix.
+- **Writes are budgeted.** A routine meeting touches 2-4 pages, and every edit outside the summary must name the future question it answers. Profile pages are living documents with a no-net-growth rule: new facts overwrite stale lines instead of stacking dated updates. Meeting summaries cap at 150 lines. Pages that never grow stay cheap to read forever.
+- **Nothing to hand-maintain.** The per-domain index is generated from page frontmatter, so it cannot drift or be forgotten. The activity log auto-rotates at 60 entries so tailing it stays fast.
+- **A bounded always-on footprint.** The vault's rule files (CLAUDE.md) are hard-capped at 80 lines for the root and 60 per domain, and lint enforces the caps, so session-start cost never creeps. The plugin itself adds roughly 600 tokens to a session; skill bodies load only when a skill actually fires.
+
+The net effect: the vault gets more valuable every week while the cost per question stays flat. It also means the skills run fine on smaller, cheaper models, because the discipline lives in procedures and scripts, not in model heroics.
+
+One practical note: the scripts need a surface that can run Python (Claude Cowork, Claude Desktop, or Claude Code). In plain web chat the skills still work; the agent just does those steps manually.
 
 ## Viewing your vault: Obsidian
 
