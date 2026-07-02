@@ -21,8 +21,12 @@ tags:
   - <domain, lowercase: work | personal | ...>
   - <firstname-lowercase>
   - people
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
 ---
 ```
+
+Bump `updated:` on every edit to the page.
 
 The `aliases` list is what makes bare-name wikilinks work. `[[Jane]]` resolves
 to `jane-doe.md` because "Jane" is in its aliases. Add every variant you have

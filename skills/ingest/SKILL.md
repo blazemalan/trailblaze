@@ -38,7 +38,7 @@ Read these. Skip everything else unless needed.
 1. **Vault-root `CLAUDE.md`** and the **domain's `CLAUDE.md`** if it has one. Always. They are size-capped so the cost is bounded.
 2. **Project rules doc** (`wiki/projects/<X>/program-rules.md` or similar), ONLY if the source touches a project that declares one.
 3. **Roster/directory pages** (people directory, org page, glossary), ONLY when you spot an unfamiliar name in the source. Do not pull them defensively.
-4. **`references/entity-page-template.md` / `references/meeting-summary-template.md`** (bundled with this skill), ONLY when stubbing a new page. Do not pull when only updating existing pages.
+4. **`references/entity-page-template.md` / `references/meeting-summary-template.md`** (bundled with this skill), ONLY when stubbing a new page or adding a section an existing page lacks (to get the heading shape right). Do not pull for in-place line updates.
 
 The conditional reads are how this skill stays cheap. Defensive reads are the main token-cost driver in ingest workflows.
 
@@ -134,7 +134,7 @@ The page is the source of truth for the person's **current state**: role, report
 3. **Current priorities: max 5 bullets.** New priority in, stalest priority out.
 4. Bump `updated:` whenever you touch the page.
 
-**Trigger test (token-efficiency rule): edit a people page only when the source makes something on it FALSE.** Role changed, person departed, reporting line moved, a listed priority is dead. "New info exists" is not a trigger; "the page now lies" is. If the source changes nothing about current state, the meeting summary's `[[wikilink]]` IS the filing. Touch nothing.
+**Trigger test (token-efficiency rule): edit a people page only when the source makes something on it FALSE.** Role changed, person departed, reporting line moved, a listed priority is dead. "New info exists" is not a trigger; "the page now lies" is. If the source changes nothing about current state, the meeting summary's `[[wikilink]]` IS the filing. Touch nothing. (Filling a still-empty section on a fresh setup stub counts as the stub exception in rule 1 above, not a trigger-test violation.)
 
 **You cannot detect a lie without looking.** For each person with a *speaking/deciding* role in the source (not mere mentions), grep their page's Current State / role lines against what the source says: a cheap grep, not a full read. Restraint applies to *writing*, never to *checking*.
 
@@ -154,7 +154,7 @@ A decision page is for **ratified, citable, hard-to-reverse outcomes only.** All
 2. **Hard to reverse.** Reopening requires a formal conversation, not "let's revisit next week."
 3. **Will be cited later.** Six months from now, someone asks *"didn't we decide X?"* and this page settles it.
 
-**If any are missing, it is NOT a decision page.** It is a proposal in flight. File it in the meeting summary's `## Decisions` section, a project 1:1 thread, or the project's status page. **Promote to a decision file ONLY when the ratifier signs off.** When the bar IS met, capture: what · by whom (with named ratifier) · alternatives considered · why this won · what would trigger reopening.
+**If any are missing, it is NOT a decision page.** It is a proposal in flight. File it in the meeting summary's `## Decisions` section, a project 1:1 thread, or the project's status page. **Promote to a decision file ONLY when the ratifier signs off.** When the bar IS met, file at `wiki/decisions/YYYY-MM-<slug>.md` and capture: what · by whom (with named ratifier) · alternatives considered · why this won · what would trigger reopening. One more gate: if a concept/status page already answers the same future question, update that instead; a decision page must add ratification detail, not restate current state.
 
 ### 7. Meeting summary (if the source is a meeting)
 
@@ -198,7 +198,7 @@ Then trim the log so it stays lean: `python3 <skill>/scripts/log-rotate.py` (kee
 ## Discipline rules
 
 - **Raw is immutable.** Typos and diarization errors stay in the raw file. The fix lives in the wiki summary.
-- **Wikilinks everywhere.** Every reference to a person/concept/decision/project links to its page. Plain-text names are invisible to the graph.
+- **Wikilinks everywhere.** Every reference to a person/concept/decision/project links to its page. Plain-text names are invisible to the graph. Exception to bare-name preference: link meeting pages path-qualified (`[[wiki/meetings/YYYY-MM-DD-<slug>]]`), because a meeting page shares its basename with its raw transcript by design.
 - **One editable home per fact; compound through links, not copies.** "What happened on `<date>`" → the meeting summary (one distillation) + the immutable raw. "Who someone is / how they operate" → their profile, a living page edited in place ONLY when a durable trait/priority/relationship shifts. "Which meetings involve them" → the graph: backlinks + grep + `index.md`, zero maintenance. Never copy a meeting onto a profile; never edit a profile just to log a meeting.
 - **Wiki pages stay tight.** 50-150 lines is the band for most pages. Prune stale claims as you add new evidence.
 - **Preserve verbatim quotes when load-bearing.** Do not paraphrase quotes. Do not quote noise either.

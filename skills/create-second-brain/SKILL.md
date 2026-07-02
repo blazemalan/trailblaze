@@ -76,7 +76,7 @@ Notes:
 
 ## Step 3: write the vault-root CLAUDE.md
 
-Use this template. Fill placeholders from the interview. **Hard cap 80 lines**; the vault-lint skill enforces it. This file loads at every session start, so every line costs tokens forever: keep it operational rules only.
+Use this template. Fill placeholders from the interview; where a table row uses `<Domain>` and the vault has several domains, write one row covering all of them with brace notation (e.g. `{Work,Personal}/raw/...`) or one row per domain. **Hard cap 80 lines**; the vault-lint skill enforces it. This file loads at every session start, so every line costs tokens forever: keep it operational rules only.
 
 ```markdown
 # Second Brain - <User's Name>
@@ -117,7 +117,7 @@ and asks questions.
 - **ingest**: file new raw into the wiki. Everyday flow: meeting ends, download
   the transcript as Markdown (Google Meet, Zoom, Otter), drop it in
   `raw/inbox/`, run ingest.
-- **query**: wiki-first answers with [[wikilink]] citations. Raw as last resort.
+- **query**: wiki-first answers with `[[wikilink]]` citations. Raw as last resort.
 - **vault-lint**: tiered health check. Weekly standard, quarterly deep.
 
 ## What to file for
@@ -150,7 +150,7 @@ Grow this only when a rule earns its keep.>
 
 ## Step 5: seed the Reference docs
 
-**`Reference/quick-guide.md`**: the human-facing mental model. Write it from this shape:
+**`Reference/quick-guide.md`**: the human-facing mental model. Write it from this shape, filling placeholders from the interview here too (use the real domain names):
 
 ```markdown
 # Second Brain - Quick Guide
@@ -241,11 +241,11 @@ Entry format: `## [YYYY-MM-DD HH:MM] [domain] <operation> | <description>`
 
 ## Step 6: seed the people pages
 
-For each person from interview question 4, stub `<Domain>/wiki/people/<name-slug>.md` using the ingest skill's `references/entity-page-template.md` (bundled with this plugin). Keep stubs to 10-15 lines: frontmatter (`type`, `description`, `aliases`, `tags`) + Role line + an empty Current State. **Only facts the user gave you; invent nothing.** These stubs exist so the first ingests have link targets.
+For each person from interview question 4, stub `<Domain>/wiki/people/<name-slug>.md` using the ingest skill's `references/entity-page-template.md` (bundled with this plugin). Keep stubs minimal, roughly 15-25 lines: frontmatter (`type`, `description`, `aliases`, `tags`, `created`, `updated`) + the template's heading shape + a one-line Role + an empty Current State. Omit Working Pattern and Quotes entirely (no evidence yet; the template's 30-50 line band is for evidence-rich stubs created during ingest). **Only facts the user gave you; invent nothing.** These stubs exist so the first ingests have link targets.
 
 ## Step 7: generate the indexes
 
-Run the ingest skill's index generator from the vault root:
+Run the ingest skill's index generator from the vault root (or set the `VAULT_ROOT` env var to the vault path, which the script accepts anywhere):
 
 ```bash
 python3 <plugin>/skills/ingest/scripts/gen-index.py --write all

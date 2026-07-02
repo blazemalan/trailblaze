@@ -41,7 +41,7 @@ python3 <skill>/scripts/search.py <keyword> [keyword ...] [-n 8]
 python3 <skill>/scripts/backlinks.py <page-slug-or-alias>
 ```
 
-Read ONLY the files these return (plus the index if needed). Fall through to the manual strategy below when the scripts come back empty or the question is synthesis-shaped rather than lookup-shaped. **Never launch a search agent before running search.py.**
+Read ONLY the files these return (plus the index if needed). When the scripts return good candidates, steps 1-2 below collapse into "read what they returned, following the per-question patterns"; walk steps 1-4 manually only when the scripts come back empty or the question is synthesis-shaped rather than lookup-shaped. **Never launch a search agent before running search.py.**
 
 ### 1. Start with the per-domain `wiki/index.md`
 

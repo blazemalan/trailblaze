@@ -20,14 +20,14 @@ Lint surfaces drift and rot so the user decides what to fix. **Report first, unt
 | Tier | What runs | When |
 |---|---|---|
 | `quick` | resolver script only | ad-hoc "is the vault clean?" |
-| `standard` (default) | resolver + judgment checks scoped to files modified since the last report + carry-forward diff | weekly |
+| `standard` (default) | resolver + judgment checks scoped to files modified since the last report + carry-forward diff (first pass ever: the whole vault is the change set) | weekly |
 | `deep` | full-vault judgment sweep | quarterly, or on request |
 
 Clean checks stay clean; rot accrues on edited pages. That is why `standard` scopes to the change set (`git log --since=<last report date> --name-only` when the vault is a git repo; otherwise files with a recent modified time).
 
 ## Step 0: mechanics (every tier)
 
-1. From the vault root: `python3 <skill>/scripts/resolver.py /tmp/vault-lint-resolver.json`. Deterministically covers checks 1, 4, 6, 7, 9, 10 plus name regressions, the recap-drift hard signal, basename collisions, and file counts. Zero tokens; comparable across runs.
+1. From the vault root: `python3 <skill>/scripts/resolver.py <temp-path>/vault-lint-resolver.json` (any scratch/temp location your environment allows). Deterministically covers checks 1, 4, 6, 7, 9, 10 plus name regressions, the recap-drift hard signal, basename collisions, and file counts. Zero tokens; comparable across runs.
 2. If the vault is a git repo, snapshot `git rev-parse HEAD` + `git status --short`. A dirty tree can mean another session is working: note it in the report header and re-verify findings against the live tree just before writing.
 3. Load `Reference/lint/allow-list.md` (in the vault): known non-findings. Do not re-litigate them; propose additions at the bottom of the report.
 4. Load the prior ledger (`vault-lint-*.findings.json` next to the last report) and diff statuses mechanically: resolved / open / regressed. Do not re-derive carry-forwards from prior report prose.
@@ -38,7 +38,7 @@ Wiki + schema layers: every domain's `wiki/`, `Reference/`, the root `index.md` 
 
 ## The 11 checks
 
-Procedures and proven one-liners: `references/check-queries.md` (most are automated by the resolver; use the file for ad-hoc spot checks). Evidence discipline: every finding cites file:line + the exact claim. A clean check is reported as clean.
+Procedures and proven one-liners: `references/check-queries.md` (most are automated by the resolver; use the file for ad-hoc spot checks). Evidence discipline: every finding cites file:line + the exact claim. A clean check is reported as clean. Report-bucket mapping: Error → Critical, Warning → Medium; Low is the residual bucket for cosmetic items the resolver surfaces outside the numbered checks (e.g. risky basename collisions). In a young vault with only a handful of meeting/source files, treat check 5's "2+ files" bar as "a clearly-roled name recurring across what files exist" and list candidates as next-pass items.
 
 1. **Broken wikilinks (Error)**: from the resolver; triage unresolved targets against the allow-list; suggest concrete retargets (search for the likely intended file before proposing a de-link).
 2. **Contradictions (Error)**: same fact, same time, different pages, no was/now reconciliation. Newer-supersedes-older = stale (check 3), not contradiction.
