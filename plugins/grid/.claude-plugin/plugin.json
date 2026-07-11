@@ -1,0 +1,13 @@
+{
+  "name": "trailblaze-grid",
+  "displayName": "The Grid",
+  "version": "0.1.0",
+  "description": "A live 3D mind-graph of your Markdown vault, lit in real time as a Claude Code agent reads and edits notes. Notes are planets, wikilinks are orbits; the agent's attention walks the graph as a path of light.",
+  "author": {
+    "name": "Blaze Malan",
+    "url": "https://github.com/blazemalan"
+  },
+  "repository": "https://github.com/blazemalan/trailblaze",
+  "license": "MIT",
+  "keywords": ["visualization", "3d", "graph", "obsidian", "second-brain", "mind-map", "observability"]
+}

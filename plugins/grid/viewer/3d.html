@@ -1,0 +1,1008 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>THE GRID · 3D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<style>
+  html, body { margin:0; height:100%; overflow:hidden; background:#030509; }
+  #wordmark {
+    position:absolute; top:14px; left:18px; z-index:2;
+    font:600 13px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+    letter-spacing:6px; color:#9fb6cc; user-select:none;
+  }
+  #wordmark b { color:#ff6a00; }
+  #galaxies { position:absolute; inset:0; z-index:2; pointer-events:none; }
+  #galaxies div {
+    position:absolute; transform:translate(-50%,-50%); pointer-events:none;
+    font:500 12px -apple-system, sans-serif; letter-spacing:7px; white-space:nowrap;
+    /* Tron-blue nameplates: #7dfdfe + cyan glow so they read clearly against
+       the dark field; a dimmer slate blue was near-invisible. */
+    color:#7dfdfe;
+    text-shadow:0 0 6px rgba(125,253,254,.85), 0 0 18px rgba(125,253,254,.45),
+                0 0 36px rgba(64,200,255,.25);
+  }
+  /* bottom UI rides above the iOS home-indicator: env() needs viewport-fit=cover,
+     and the coarse-pointer bump covers webviews that report zero insets
+     (without it the whole chips row can be swallowed by the home bar) */
+  #status { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); right:16px; z-index:2; width:8px; height:8px; border-radius:50%; background:#555; }
+  #modes {
+    position:absolute; bottom:calc(10px + env(safe-area-inset-bottom, 0px)); left:12px; z-index:4;
+    font:500 10px -apple-system, sans-serif; letter-spacing:3px; color:#2e3f52; user-select:none;
+  }
+  #modes span { cursor:pointer; padding:8px 7px; color:#51677e; }
+  @media (pointer: coarse) {
+    #modes { bottom:calc(26px + env(safe-area-inset-bottom, 0px)); }
+    #status { bottom:calc(30px + env(safe-area-inset-bottom, 0px)); }
+    #modes span { padding:12px 9px; font-size:11px; }
+  }
+  #modes span.on { color:#d9e6f2; text-shadow:0 0 8px rgba(150,185,215,0.6); }
+  #status.live { background:#ff6a00; box-shadow:0 0 8px #ff6a00aa; }
+  #status.stale { background:#3b4a5c; }
+  #status.replay { background:#7fb6e8; box-shadow:0 0 8px #7fb6e8aa; }
+  #modes span#rbtn.on { color:#ffb27a; text-shadow:0 0 8px rgba(255,106,0,0.55); }
+  #rpanel {
+    position:absolute; bottom:calc(44px + env(safe-area-inset-bottom, 0px)); left:12px; z-index:5; display:none;
+    max-height:46vh; overflow-y:auto; min-width:250px; max-width:360px;
+    background:rgba(6,10,16,0.92); border:1px solid rgba(120,160,200,0.18);
+    border-radius:6px; padding:5px 0;
+    font:500 11px -apple-system, sans-serif; color:#9fb6cc;
+  }
+  #rpanel .walk { padding:7px 12px; cursor:pointer; letter-spacing:1px; line-height:1.5; }
+  #rpanel .walk:hover { background:rgba(255,106,0,0.08); }
+  #rpanel .walk b { color:#d9e6f2; font-weight:600; }
+  #rpanel .walk div { color:#51677e; letter-spacing:0.5px; }
+  /* the bar owns its pointer space: fat hitbox (padding + ::before apron) and
+     touch-action:none, so a thumb that misses the slider by a hair can never
+     leak the drag into OrbitControls and fling the camera */
+  #rbar {
+    position:absolute; bottom:calc(10px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%); z-index:5;
+    display:none; align-items:center; gap:12px; padding:13px 20px;
+    background:rgba(6,10,16,0.92); border:1px solid rgba(120,160,200,0.18); border-radius:24px;
+    font:600 11px -apple-system, sans-serif; color:#9fb6cc; letter-spacing:2px; user-select:none;
+    white-space:nowrap; touch-action:none;
+  }
+  #rbar::before { content:''; position:absolute; inset:-14px; border-radius:34px; }
+  #rbar span, #rbar input { position:relative; }
+  #rbar span { cursor:pointer; padding:6px 2px; }
+  #rbar #rlabel { color:#51677e; cursor:default; letter-spacing:1px; }
+  #rbar #rlive { color:#ff6a00; }
+  #rslider { width:190px; height:26px; accent-color:#ff6a00; touch-action:none; cursor:pointer; }
+  /* this block must stay AFTER the #rbar/#rpanel base rules: media queries
+     add no specificity, so source order is what makes these bottoms win */
+  @media (pointer: coarse) {
+    #rslider { width:150px; }
+    #rbar { max-width:94vw; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); }
+    #rpanel { bottom:calc(74px + env(safe-area-inset-bottom, 0px)); }
+  }
+  #g { position:absolute; inset:0; }
+  #labels { position:absolute; inset:0; z-index:3; pointer-events:none; }
+  #labels div {
+    position:absolute; transform:translate(-50%,-100%); pointer-events:none;
+    font:600 11px -apple-system, sans-serif; letter-spacing:1.5px; white-space:nowrap;
+    color:#ff5a1f; text-shadow:0 1px 4px rgba(0,0,0,0.9), 0 0 10px rgba(255,50,0,0.85), 0 0 2px rgba(255,90,30,0.9);
+  }
+  #labels div.cold {
+    color:#c3d8ea; font-weight:500;
+    text-shadow:0 0 4px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.9), 0 0 9px rgba(130,170,210,0.6);
+  }
+  /* clicked-orb nameplate: Tron blue, same family as the galaxy names */
+  #labels div.sel {
+    color:#7dfdfe; font-weight:600;
+    text-shadow:0 0 6px rgba(125,253,254,.85), 0 0 16px rgba(125,253,254,.5), 0 1px 4px rgba(0,0,0,.9);
+  }
+  /* TUNE drawer: Obsidian-graph-style sliders, observer-blue accent */
+  #spanel {
+    display:none; position:absolute; left:14px; bottom:58px; z-index:6;
+    background:rgba(5,10,18,0.93); border:1px solid rgba(125,253,254,0.16);
+    border-radius:10px; padding:13px 16px 11px; width:225px;
+    font:500 10px -apple-system, sans-serif; letter-spacing:2px; color:#7fa3bd;
+  }
+  #spanel label { display:block; margin:9px 0 3px; }
+  #spanel input[type=range] { width:100%; height:22px; accent-color:#7dfdfe; touch-action:none; cursor:pointer; }
+  #spanel #sreset { margin-top:11px; text-align:center; cursor:pointer; color:#7dfdfe; letter-spacing:3px; }
+  @media (pointer: coarse) { #spanel { left:8px; bottom:calc(78px + env(safe-area-inset-bottom, 0px)); } }
+</style>
+</head>
+<body>
+<div id="wordmark">THE GRID <b>▪</b></div>
+<div id="modes">SPLIT&nbsp; <span data-k="folders">FOLDERS</span><span data-k="pulse">PULSE</span>&nbsp;·&nbsp;<span id="rbtn">REPLAY</span>&nbsp;·&nbsp;<span id="sbtn">TUNE</span></div>
+<div id="spanel"></div>
+<div id="rpanel"></div>
+<div id="rbar">
+  <span id="rplay">⏸</span>
+  <input type="range" id="rslider" min="0" max="1" value="0">
+  <span id="rspeed">1×</span>
+  <span id="rlabel"></span>
+  <span id="rlive">✕ LIVE</span>
+</div>
+<div id="status"></div>
+<div id="galaxies"></div>
+<div id="labels"></div>
+<div id="g"></div>
+<script src="/3d-force-graph.min.js"></script>
+<script>
+const FADE_MS = 5 * 60 * 1000;
+const PACE_MS = 800;
+const ICE = { r: 0.64, g: 0.73, b: 0.82 };
+const ORANGE = { r: 1.0, g: 0.27, b: 0.0 };
+const EDIT_ORANGE = { r: 1.0, g: 0.31, b: 0.02 };
+
+const statusEl = document.getElementById('status');
+let byId = new Map(), byFolder = new Map(), allNodes = [], allLinks = [];
+const queue = [];
+let camTarget = null, lastAim = 0, userTouchedAt = 0, lastFired = null;
+const trail = [];
+
+let PAL = null;
+function initPalette(sampleColor) {
+  const c = () => sampleColor.clone();
+  // Color anchor is the wordmark's #ff6a00. An earlier, redder palette relied on
+  // additive halo stacking to push toward orange; once the halo was toned down
+  // those flares read salmon, so the emissives now carry the orange directly.
+  PAL = {
+    idleCol: c().setStyle('#a4b9d1'),
+    idleEmis: c().setStyle('#0e1a29'),
+    fireCol: c().setStyle('#3a1200'),
+    fireEmis: c().setStyle('#ff6000'),
+    editEmis: c().setStyle('#ff7d14'),
+    haloEmis: c().setStyle('#ff6a00'),
+    haloCol: c().setStyle('#552200'),
+    trailCol: c().setStyle('#e85d00'),
+  };
+}
+
+// NOTE radius ∝ REL_SIZE * cbrt(SIZE_K * mass^1.8) — SIZE_K is cube-rooted, so
+// it's a weak lever (a 0.4→0.22 cut shrinks radii only ~18%); REL_SIZE is the
+// linear one. The mass curve itself is fixed.
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches;
+// ONE visual design across devices: ball size, spread, color, and glow are
+// identical everywhere; the camera + zoomToFit absorb the different viewport
+// shapes. Only INVISIBLE plumbing forks by device — the perf pixel-ratio cap and
+// the iOS home-bar safe-area dodge. Forking ball SIZE per device just makes the
+// two views drift apart while looking unchanged on whichever one you're testing.
+const SIZE_K = 0.4;
+const REL_SIZE = 4;
+// Spacing physics: springs scale linearly with distance but charge falls off
+// ~1/d², so a SPREAD-times-larger equilibrium needs charge × SPREAD³. Scaling
+// charge linearly instead lets the springs win and the sky re-collapses. Every
+// charge writer multiplies by SPREAD3; the split-force LEASH divides by SPREAD
+// or it crushes the layout back inward. SPREAD is universal across devices — a
+// writer that forgets the multiplier snaps the layout.
+const SPREAD = 1.7;
+const SPREAD3 = Math.pow(SPREAD, 3);
+const rad = n => REL_SIZE * Math.cbrt(SIZE_K * Math.pow(n.mass || 1, 1.8));
+
+const graph = ForceGraph3D({ rendererConfig: { antialias: true, powerPreference: 'low-power' } })(document.getElementById('g'))
+  .backgroundColor('#030509')
+  .showNavInfo(false)
+  .nodeLabel(n => n.title)
+  .nodeRelSize(REL_SIZE)
+  .nodeVal(n => SIZE_K * Math.pow(n.mass || 1, 1.8))
+  .nodeColor(() => '#a4b9d1')
+  .nodeOpacity(0.95)
+  .linkColor(() => '#96b9d7')
+  .linkOpacity(0.17)
+  .linkDirectionalParticles(0)
+  .linkDirectionalParticleWidth(2.4)
+  .linkDirectionalParticleColor(() => '#ff4000')
+  .linkDirectionalParticleSpeed(0.014)
+  .warmupTicks(120)
+  .cooldownTime(20000);
+
+// phones render at dpr 3 (9x the pixels of dpr 1) and cook; cap them hard
+graph.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, IS_TOUCH ? 1.5 : 2));
+
+fetch('/graph.json').then(r => r.json()).then(g => {
+  allNodes = g.nodes; allLinks = g.links;
+  allNodes.forEach(n => {
+    n.f = { v: 0, fading: false, fadeT0: 0, isEdit: false };
+    byId.set(n.id, n);
+    if (!byFolder.has(n.folder)) byFolder.set(n.folder, []);
+    byFolder.get(n.folder).push(n);
+  });
+  graph.graphData({ nodes: allNodes, links: allLinks });
+  // planet physics: mass (links + content) carves out presence, moons orbit close.
+  // distanceMax stops the endless mutual repulsion that inflated the whole sky
+  // and shot orphan notes into deep space.
+  // fly-through spacing: link distance is surface-to-surface with a 40-unit
+  // flight corridor, not center-to-center constants that big hubs swallow — a
+  // mass-20 hub has radius ~18, so a center-to-center formula would bury its
+  // moons ~34 from center. forceCollide rejected: at ~19 links/node it never
+  // settles (boiling) and its octrees are too costly on mobile.
+  // uF.repel / uF.dist are the TUNE sliders — every charge writer carries them
+  // (same law as SPREAD: a writer that forgets the multiplier snaps the layout)
+  graph.d3Force('charge').strength(n => (-24 - (n.mass || 1) * 7) * SPREAD3 * uF.repel)
+    .distanceMax(420 * SPREAD);
+  graph.d3Force('link').distance(l =>
+    (rad(l.source) + rad(l.target) + 40) * SPREAD * uF.dist);
+  // the split force drifts each galaxy AS A RIGID BODY: every member gets the
+  // same velocity, aimed from the group's centroid at its slot. Converges and
+  // stops (a state, not a level: re-clicking a chip is a no-op once settled).
+  // OFF keeps the last grouping but aims all centroids at the origin, so the
+  // galaxies actually re-merge instead of floating wherever they were left.
+  graph.d3Force('split', (() => {
+    const K = 0.28;    // rigid drift of each galaxy toward its slot
+    // leash pulls inward ∝ distance from origin, so at SPREAD× radius it drags
+    // SPREAD× harder and crushes the spread — divide it back out
+    const LEASH = 0.05 / SPREAD;
+    const ORIGIN = { x: 0, z: 0 };
+    let ns = [];
+    const f = alpha => {
+      if (!ns.length) return;
+      const gof = mode.of || lastOf;
+      if (!gof) {
+        // never split yet: just keep the universe bounded so orphans
+        // (beyond charge range) don't drift off and freeze in deep space
+        for (const n of ns) {
+          n.vx += (0 - n.x) * LEASH * alpha;
+          n.vz += (0 - n.z) * LEASH * alpha;
+          n.vy += (0 - n.y) * LEASH * alpha;
+        }
+        return;
+      }
+      const cent = new Map();
+      for (const n of ns) {
+        const g = gof(n);
+        let c = cent.get(g);
+        if (!c) { c = { x: 0, z: 0, n: 0 }; cent.set(g, c); }
+        c.x += n.x; c.z += n.z; c.n++;
+      }
+      for (const [g, c] of cent) {
+        const t = (mode.of && targets.get(g)) || ORIGIN;
+        c.vx = (t.x - c.x / c.n) * K * alpha;
+        c.vz = (t.z - c.z / c.n) * K * alpha;
+      }
+      for (const n of ns) {
+        const g = gof(n);
+        const c = cent.get(g);
+        const t = (mode.of && targets.get(g)) || ORIGIN;
+        n.vx += c.vx + (t.x - n.x) * LEASH * alpha;
+        n.vz += c.vz + (t.z - n.z) * LEASH * alpha;
+        n.vy += (0 - n.y) * LEASH * alpha;  // toward the galactic plane, else orphans freeze into curtains
+      }
+    };
+    f.initialize = nodes => { ns = nodes; };
+    return f;
+  })());
+  const q = new URLSearchParams(location.search).get('split');
+  setMode(MODES[q] ? q : 'off');
+  // default node meshes share materials per color; give every node its own
+  // so flares can tint individually (bundle exposes no THREE global)
+  const declone = setInterval(() => {
+    const ready = allNodes.filter(n => n.__threeObj);
+    if (!ready.length) return;
+    if (!PAL && ready.length) initPalette(ready[0].__threeObj.material.color);
+    ready.forEach(n => {
+      if (!n.__ownMat) {
+        n.__threeObj.material = n.__threeObj.material.clone();
+        // paint idle once here so tick can skip cold nodes entirely
+        n.__threeObj.material.color.copy(PAL.idleCol);
+        n.__threeObj.material.emissive.copy(PAL.idleEmis);
+        n.__ownMat = true;
+        n.__baseScale = n.__threeObj.scale.x;
+      }
+    });
+    if (ready.length === allNodes.length) { clearInterval(declone); applyTune('size'); }
+  }, 400);
+  connect();
+  requestAnimationFrame(tick);
+  // pull the camera back to frame the whole (now 1.7x) cloud — twice, since
+  // the layout is still settling at 3s. All devices: the default camera
+  // distance is computed from node count, not layout extent.
+  [3000, 9000].forEach(t => setTimeout(() => {
+    if (!replay.active) graph.zoomToFit(800, IS_TOUCH ? 45 : 80);
+  }, t));
+});
+
+// serene auto-orbit, pauses when the viewer grabs it
+const controls = graph.controls();
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.65;
+controls.addEventListener('start', () => { userTouchedAt = performance.now(); controls.autoRotate = false; });
+setInterval(() => {
+  if (performance.now() - userTouchedAt > 15000) controls.autoRotate = true;
+}, 3000);
+
+// ── click-to-inspect: BLUE is the observer's channel. Clicking an orb names it
+// in Tron blue and faintly lights its links + neighbor balls so you can see what
+// connects to what. Orange stays the agent's attention only — the path-only
+// lighting law is untouched here, and a trail link is never overpainted. Click
+// the same orb again, or empty sky, to clear.
+const SEL_BLUE = '#7dfdfe';
+let sel = null;
+const selPainted = [];   // neighbor nodes we tinted, to restore on clear
+const selLinks = [];     // links we tinted, to restore on clear
+const nbrs = new Map();  // node id -> [{node, link}] adjacency, built lazily
+function linkEnd(l, which) { return typeof l[which] === 'object' ? l[which] : byId.get(l[which]); }
+function neighborsOf(n) {
+  if (!nbrs.has(n.id)) {
+    const out = [];
+    for (const l of allLinks) {
+      const s = linkEnd(l, 'source'), t = linkEnd(l, 'target');
+      if (s === n) out.push({ node: t, link: l });
+      else if (t === n) out.push({ node: s, link: l });
+    }
+    nbrs.set(n.id, out);
+  }
+  return nbrs.get(n.id);
+}
+function clearSel() {
+  for (const l of selLinks) {
+    if (l.__lineObj && l.__ownMat) { l.__lineObj.material.color.set('#96b9d7'); l.__lineObj.material.opacity = uF.linkop; }
+  }
+  selLinks.length = 0;
+  const now = Date.now();
+  for (const m of selPainted) {
+    // only repaint what's cold; a flaring node's tick repaint owns it anyway
+    if (m.__ownMat && PAL && flareValue(m, now) <= 0) {
+      m.__threeObj.material.color.copy(PAL.idleCol);
+      m.__threeObj.material.emissive.copy(PAL.idleEmis);
+      if (m.__halo) m.__halo.visible = false;
+    }
+  }
+  selPainted.length = 0;
+  sel = null;
+}
+function selectNode(n) {
+  clearSel();
+  if (!n) return;
+  sel = n;
+  // the orb itself wears the blue, not just its word: emissive + a blue halo.
+  // A flaring node keeps its orange — tick repaints hot nodes every frame and
+  // attention outranks inspection.
+  if (n.__ownMat && PAL) {
+    n.__threeObj.material.emissive.set('#2fd8e6');
+    const h = ensureHalo(n);
+    h.visible = true;
+    h.scale.setScalar(1.35);
+    h.material.opacity = 0.30 * uF.glow;
+    h.material.emissive.set(SEL_BLUE);
+    h.material.color.set(SEL_BLUE);
+    selPainted.push(n);
+  }
+  for (const { node: m, link: l } of neighborsOf(n)) {
+    const o = ensureLinkGlow(l);
+    if (o && !trail.includes(l)) { o.material.color.set(SEL_BLUE); o.material.opacity = 0.35; selLinks.push(l); }
+    if (m.__ownMat && PAL && flareValue(m, Date.now()) <= 0) {
+      m.__threeObj.material.emissive.set('#1a6a70');  // faint cyan ember, color stays ice
+      selPainted.push(m);
+    }
+  }
+}
+graph.onNodeClick(n => selectNode(n));
+graph.onBackgroundClick(() => clearSel());
+// drag that STARTS on an orb selects it too. A drag never emits a click, so we
+// select on pointerdown via the hover raycast the library already runs. Touch
+// has no hover; taps arrive as clicks and the line above catches them.
+let hoverNode = null;
+graph.onNodeHover(n => { hoverNode = n || null; });
+graph.renderer().domElement.addEventListener('pointerdown', () => {
+  if (hoverNode) selectNode(hoverNode);
+});
+
+let es = null;
+function connect() {
+  if (es) es.close();
+  es = new EventSource('/events');
+  let replaying = true;
+  es.onopen = () => { replaying = true; };
+  es.onmessage = m => {
+    // during a replay the live feed is muted entirely; goLive() reconnects and
+    // the server's history buffer reconstructs the true present
+    if (replay.active) return;
+    const ev = JSON.parse(m.data);
+    if (ev.action === 'live') { replaying = false; statusEl.className = 'live'; return; }
+    if (replaying) applyEvent(ev, true);
+    else queue.push(ev);
+  };
+  es.onerror = () => { if (!replay.active) statusEl.className = 'stale'; };
+}
+
+setInterval(() => { if (!replay.active && queue.length) applyEvent(queue.shift(), false); }, PACE_MS);
+
+setInterval(() => {  // the walked path stays alive with current while its ends burn
+  const now = Date.now();
+  for (let i = trail.length - 1; i >= 0; i--) {
+    const l = trail[i];
+    if (Math.min(flareValue(l.source, now), flareValue(l.target, now)) < 0.05) { trail.splice(i, 1); continue; }
+    graph.emitParticle(l);
+  }
+}, 1400);
+
+// shared flare/trail core for the live feed and replay. opts: particles
+// (edge pulses on arrival) and aim (camera drift toward the node).
+function fireNote(ev, opts) {
+  const n = byId.get(ev.note);
+  if (!n) return null;
+  n.f.v = ev.action === 'edit' ? 1.0 : 0.8;
+  n.f.isEdit = ev.action === 'edit';
+  n.f.fading = false;
+  if (lastFired && lastFired !== n) {
+    const path = allLinks.find(l =>
+      (l.source === lastFired && l.target === n) || (l.source === n && l.target === lastFired));
+    if (path && !trail.includes(path)) trail.push(path);
+    if (trail.length > 60) trail.shift();
+    if (path && opts.particles) [0, 160, 320].forEach(d => setTimeout(() => graph.emitParticle(path), d));
+    // no wikilink between consecutive notes → draw the walked hop anyway:
+    // replay walks and live chains often hop between unlinked notes, and the
+    // route must still be visible.
+    // Ghost lines are scene objects, NOT graphData links — zero physics pull.
+    if (!path && !ghosts.some(g =>
+        (g.a === lastFired && g.b === n) || (g.a === n && g.b === lastFired))) {
+      ghosts.push({ a: lastFired, b: n, line: null });
+      if (ghosts.length > 60) dropGhost(0);
+    }
+  }
+  lastFired = n;
+  if (opts.aim) camTarget = n;
+  return n;
+}
+
+function applyEvent(ev, isReplay) {
+  const now = Date.now();
+  if (ev.action === 'prompt') {
+    allNodes.forEach(n => {
+      if (n.f.v > 0 && !n.f.fading) { n.f.fading = true; n.f.fadeT0 = isReplay ? ev.ts * 1000 : now; }
+    });
+    return;
+  }
+  if (ev.action === 'sweep') {
+    return;
+  }
+  const n = fireNote(ev, { particles: !isReplay, aim: !isReplay });
+  if (n && !isReplay) {
+    const t = Date.now();
+    graph.d3Force('charge').strength(nn => (-24 - (nn.mass || 1) * 7) * SPREAD3 * uF.repel * (1 + 4 * flareValue(nn, t)));
+    graph.d3ReheatSimulation();
+  }
+}
+
+// ghost walk-segments: a THREE line per unlinked hop, cloned from a real link's
+// line object (the bundle exposes no THREE global — same trick as ensureHalo).
+const ghosts = [];  // { a: node, b: node, line: THREE.Line | null }
+function dropGhost(i) {
+  const g = ghosts[i];
+  if (g.line) { graph.scene().remove(g.line); g.line.geometry.dispose(); g.line.material.dispose(); }
+  ghosts.splice(i, 1);
+}
+function ensureGhostLine(g) {
+  if (g.line) return g.line;
+  const proto = allLinks.find(l => l.__lineObj);
+  if (!proto) return null;  // renderer not ready; retry next frame
+  const geom = proto.__lineObj.geometry.clone();
+  const mat = proto.__lineObj.material.clone();
+  mat.transparent = true;
+  const line = new proto.__lineObj.constructor(geom, mat);
+  line.frustumCulled = false;  // positions are hand-written; skip stale bounds
+  graph.scene().add(line);
+  g.line = line;
+  return line;
+}
+
+function ensureLinkGlow(l) {
+  const o = l.__lineObj;
+  if (!o) return null;
+  if (!l.__ownMat) { o.material = o.material.clone(); o.material.transparent = true; l.__ownMat = true; }
+  return o;
+}
+
+function ensureHalo(n) {
+  if (n.__halo) return n.__halo;
+  const o = n.__threeObj;
+  const mat = o.material.clone();
+  mat.transparent = true;
+  mat.blending = 2;        // additive: this is what makes it glow
+  mat.depthWrite = false;
+  mat.side = 1;            // BackSide: rim glow only, never washes the core to peach
+  const h = new o.constructor(o.geometry, mat);  // no child recursion
+  o.add(h);
+  n.__halo = h;
+  return h;
+}
+
+function flareValue(n, now) {
+  if (n.f.v <= 0) return 0;
+  if (!n.f.fading) return n.f.v;
+  return n.f.v * Math.max(0, 1 - (now - n.f.fadeT0) / FADE_MS);
+}
+
+const labelBox = document.getElementById('labels');
+const labelDivs = new Map();  // id -> { d, n }
+// the full 695-node scan is throttled (scanLabels); positions of the ~30
+// visible divs sync every frame (syncLabels) so they still ride the orbit
+function scanLabels(now) {
+  if (typeof graph.graph2ScreenCoords !== 'function') return;
+  const hot = [];
+  for (const n of allNodes) {
+    const fv = flareValue(n, now);
+    if (fv > 0.3 && n.x !== undefined) hot.push([fv, n]);
+  }
+  hot.sort((a, b) => b[0] - a[0]);
+  const keep = new Set();
+  const place = (n, opacity, cold) => {
+    keep.add(n.id);
+    let r = labelDivs.get(n.id);
+    if (!r) {
+      const d = document.createElement('div');
+      d.textContent = n.title; labelBox.appendChild(d);
+      r = { d, n }; labelDivs.set(n.id, r);
+    }
+    r.d.className = cold ? 'cold' : '';
+    r.d.style.opacity = opacity;
+  };
+  for (const [fv, n] of hot.slice(0, 12)) place(n, 0.35 + fv * 0.65, false);
+  // lean in close and the sleeping notes tell you their names
+  const cam = graph.camera().position;
+  const near = [];
+  for (const n of allNodes) {
+    if (n.x === undefined || keep.has(n.id)) continue;
+    const dx = n.x - cam.x, dy = n.y - cam.y, dz = n.z - cam.z;
+    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (dist < 170) near.push([dist, n]);
+  }
+  near.sort((a, b) => a[0] - b[0]);
+  for (const [dist, n] of near.slice(0, 18)) place(n, 0.35 + 0.6 * (1 - dist / 170), true);
+  // the clicked orb always wears its name, in the observer's blue
+  if (sel && sel.x !== undefined) {
+    place(sel, 1, false);
+    labelDivs.get(sel.id).d.className = 'sel';
+  }
+  for (const [id, r] of labelDivs) {
+    if (!keep.has(id)) { r.d.remove(); labelDivs.delete(id); }
+  }
+}
+function syncLabels() {
+  if (typeof graph.graph2ScreenCoords !== 'function') return;
+  for (const r of labelDivs.values()) {
+    const n = r.n;
+    // anchor above the sphere's surface, not its center, so the name never
+    // sits inside the ball (radius = nodeRelSize * cbrt(nodeVal), padded)
+    const wr = rad(n) * 1.15;
+    const c = graph.graph2ScreenCoords(n.x, n.y + wr, n.z);
+    r.d.style.left = c.x + 'px';
+    r.d.style.top = (c.y - 4) + 'px';
+  }
+}
+
+// split modes: how the sky divides into galaxies. `of` maps a node to its group.
+const MODES = {
+  folders: { order: [], of: n => n.folder || 'root' },
+  pulse:   { order: ['alive', 'dormant'], of: n => (n.age_days <= 14 ? 'alive' : 'dormant') },
+  off:     { order: [], of: null },
+};
+let mode = MODES.off, targets = new Map(), lastOf = null;
+
+function setMode(key) {
+  mode = MODES[key];
+  if (mode.of) lastOf = mode.of;
+  // cross-galaxy links go slack while a split is on (drawn the same, pull 10x
+  // less), else they drag each galaxy's linked core off its slot and tear it
+  // away from its own orphan halo
+  const linkF = graph.d3Force('link');
+  if (!linkF.__defStrength) linkF.__defStrength = linkF.strength();
+  const gof = mode.of;
+  linkF.strength((l, ...a) =>
+    linkF.__defStrength(l, ...a) * (!gof || gof(l.source) === gof(l.target) ? 1 : 0.1));
+  targets = new Map();
+  if (mode.of) {
+    // explicit order wins; groups outside it (e.g. the FOLDERS split, whose
+    // order is empty) fall back to a stable alphabetical sort
+    const groups = [...new Set(allNodes.map(mode.of))].sort((a, b) => {
+      const ia = mode.order.indexOf(a), ib = mode.order.indexOf(b);
+      const ra = ia < 0 ? 99 : ia, rb = ib < 0 ? 99 : ib;
+      return ra - rb || String(a).localeCompare(String(b));
+    });
+    // ring radius scales with the actual cloud. A fixed radius tuned on a
+    // hundreds-of-notes sky flings a small vault's galaxies out of frame: the
+    // camera frames the tight starting cloud and a constant ring exits it.
+    // 85th-percentile XZ distance ~ cloud radius (one deep-space stray must not
+    // inflate the ring); the old constants remain as the CAP, so large skies
+    // keep the tuned behavior exactly, and a floor keeps degenerate/unsettled
+    // clouds from collapsing the split.
+    const xz = allNodes.map(n => Math.hypot(n.x || 0, n.z || 0)).sort((a, b) => a - b);
+    const cloudR = xz.length ? xz[Math.floor(xz.length * 0.85)] : 0;
+    const cap = (groups.length <= 2 ? 620 : 700) * SPREAD;  // ring grows with the sky or spread galaxies overlap
+    const R = Math.min(cap, Math.max(cloudR * 1.6, 120 * SPREAD));
+    groups.forEach((g, i) => {
+      const th = (i / groups.length) * Math.PI * 2;
+      targets.set(g, { x: Math.cos(th) * R, z: Math.sin(th) * R });
+    });
+  }
+  for (const r of galaxyDivs.values()) r.d.remove();
+  galaxyDivs.clear();
+  document.querySelectorAll('#modes span[data-k]').forEach(s =>
+    s.classList.toggle('on', s.dataset.k === key));
+  graph.d3ReheatSimulation();
+}
+// each chip is a strict on/off toggle: click to split, click again to merge.
+// clicking a different chip while one is on switches the split to that one.
+document.getElementById('modes').addEventListener('click', e => {
+  const k = e.target.dataset && e.target.dataset.k;
+  if (!k) return;
+  setMode(mode === MODES[k] ? 'off' : k);
+});
+
+// galaxy nameplates float above each group's crown. Median center + 85th
+// percentile height: one stray node flung to deep space must not carry the label.
+const galaxyBox = document.getElementById('galaxies');
+const galaxyDivs = new Map();  // group -> { d, anchor }
+function scanGalaxies() {
+  if (!mode.of) {
+    for (const r of galaxyDivs.values()) r.d.remove();
+    galaxyDivs.clear();
+    return;
+  }
+  const buckets = new Map();
+  for (const n of allNodes) {
+    if (n.x === undefined) continue;
+    const g = mode.of(n);
+    if (!buckets.has(g)) buckets.set(g, []);
+    buckets.get(g).push(n);
+  }
+  const keep = new Set();
+  for (const [g, ns] of buckets) {
+    if (ns.length < 3) continue;
+    keep.add(g);
+    const xs = ns.map(n => n.x).sort((a, b) => a - b);
+    const ys = ns.map(n => n.y).sort((a, b) => a - b);
+    const zs = ns.map(n => n.z).sort((a, b) => a - b);
+    const anchor = {
+      x: xs[xs.length >> 1],
+      y: ys[Math.floor(ys.length * 0.85)] + 42,
+      z: zs[zs.length >> 1],
+    };
+    let r = galaxyDivs.get(g);
+    if (!r) {
+      const d = document.createElement('div');
+      d.textContent = g.toUpperCase();
+      galaxyBox.appendChild(d);
+      r = { d, anchor };
+      galaxyDivs.set(g, r);
+    }
+    r.anchor = anchor;
+  }
+  for (const [g, r] of galaxyDivs) {
+    if (!keep.has(g)) { r.d.remove(); galaxyDivs.delete(g); }
+  }
+}
+function syncGalaxies() {
+  if (typeof graph.graph2ScreenCoords !== 'function') return;
+  for (const r of galaxyDivs.values()) {
+    const c = graph.graph2ScreenCoords(r.anchor.x, r.anchor.y, r.anchor.z);
+    r.d.style.left = c.x + 'px';
+    r.d.style.top = c.y + 'px';
+  }
+}
+
+// ── replay: rewatch any walk ────────────────────────────────────────────────
+// a walk = one prompt-to-prompt attention run from the persisted stream
+// (/walks.json). Replay mutes the live feed, goes cold, and re-burns the path
+// event by event; the scrubber seeks by rebuilding state from event zero.
+// No fades in here: a walk contains no prompt markers, so the whole route
+// holds lit until you leave, ending on the "story so far" tableau.
+const replay = { active: false, walk: null, i: 0, playing: false, speed: 1, timer: null };
+const R_PACE = 700;
+const SPEEDS = [1, 2, 4];
+const rpanel = document.getElementById('rpanel');
+const rbar = document.getElementById('rbar');
+const rbtn = document.getElementById('rbtn');
+const rslider = document.getElementById('rslider');
+const rplay = document.getElementById('rplay');
+const rspeed = document.getElementById('rspeed');
+const rlabel = document.getElementById('rlabel');
+
+function resetGrid() {
+  // trail materials keep their last-set opacity, so dim them before dropping
+  for (const l of trail) if (l.__lineObj && l.__ownMat) l.__lineObj.material.opacity = uF.linkop;
+  trail.length = 0;
+  while (ghosts.length) dropGhost(0);
+  allNodes.forEach(n => { n.f.v = 0; n.f.fading = false; n.f.isEdit = false; });
+  lastFired = null; camTarget = null; queue.length = 0;
+  // cold repaint of nodes/halos self-heals in tick via the __wasHot pass
+}
+
+function noteTitle(id) {
+  const n = byId.get(id);
+  return n ? n.title : id.split('/').pop();
+}
+
+function walkLabel(w) {
+  const d = new Date(w.start * 1000);
+  const day = d.toDateString() === new Date().toDateString()
+    ? 'TODAY'
+    : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }).toUpperCase();
+  const t = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${day} ${t}`;
+}
+
+async function openWalkPanel() {
+  const walks = await fetch('/walks.json').then(r => r.json()).catch(() => []);
+  rpanel.textContent = '';
+  if (!walks.length) {
+    const d = document.createElement('div');
+    d.className = 'walk'; d.textContent = 'NO WALKS RECORDED YET';
+    rpanel.appendChild(d);
+  }
+  for (const w of walks.slice(0, 40)) {
+    const d = document.createElement('div');
+    d.className = 'walk';
+    const head = document.createElement('b');
+    head.textContent = `${walkLabel(w)} · ${w.count} note${w.count === 1 ? '' : 's'}`;
+    const route = document.createElement('div');
+    route.textContent = w.events.slice(0, 3).map(e => noteTitle(e.note)).join(' → ')
+      + (w.count > 3 ? ' …' : '');
+    d.append(head, route);
+    d.onclick = () => enterReplay(w);
+    rpanel.appendChild(d);
+  }
+  rpanel.style.display = 'block';
+  rbtn.classList.add('on');
+}
+
+function closeWalkPanel() {
+  rpanel.style.display = 'none';
+  rbtn.classList.toggle('on', replay.active);
+}
+
+function schedule() {
+  clearInterval(replay.timer);
+  replay.timer = setInterval(() => {
+    if (!replay.playing) return;
+    if (replay.i >= replay.walk.events.length) {
+      replay.playing = false; rplay.textContent = '▶';
+      return;
+    }
+    // aim:false — the auto-aim dive is a live-mode feature. In replay it reads
+    // as a wrecked camera (hands-off for ~15s and the camera flies itself into
+    // the cloud). The observer keeps their framing; a FOLLOW toggle for the
+    // cinematic version could be added later.
+    fireNote(replay.walk.events[replay.i], { particles: true, aim: false });
+    replay.i++;
+    rslider.value = replay.i;
+  }, R_PACE / replay.speed);
+}
+
+function enterReplay(walk) {
+  // save the viewpoint so ✕ LIVE can heal any camera damage (an accidental
+  // canvas-drag fling has no other way back)
+  if (!replay.active) {
+    const p = graph.camera().position, t = graph.controls().target;
+    replay.camSave = { pos: { x: p.x, y: p.y, z: p.z }, tgt: { x: t.x, y: t.y, z: t.z } };
+  }
+  replay.active = true; replay.walk = walk; replay.i = 0; replay.playing = true;
+  resetGrid();
+  closeWalkPanel();
+  statusEl.className = 'replay';
+  rbtn.classList.add('on');
+  rplay.textContent = '⏸';
+  rslider.max = walk.events.length;
+  rslider.value = 0;
+  rlabel.textContent = `${walkLabel(walk)} · ${walk.count} note${walk.count === 1 ? '' : 's'}`;
+  rbar.style.display = 'flex';
+  schedule();
+}
+
+function seekReplay(idx) {
+  // rebuild the story from event zero; pause state is preserved so scrubbing
+  // while paused just shows the tableau as-of that point
+  resetGrid();
+  const evs = replay.walk.events;
+  for (let k = 0; k < idx && k < evs.length; k++) fireNote(evs[k], { particles: false, aim: false });
+  replay.i = Math.min(idx, evs.length);
+}
+
+function goLive() {
+  clearInterval(replay.timer);
+  replay.active = false; replay.playing = false; replay.walk = null; replay.timer = null;
+  rbar.style.display = 'none';
+  rbtn.classList.remove('on');
+  statusEl.className = 'stale';
+  resetGrid();
+  if (replay.camSave) {
+    graph.cameraPosition(replay.camSave.pos, replay.camSave.tgt, 1200);
+    replay.camSave = null;
+  }
+  connect();  // server's history buffer reconstructs the true present
+}
+
+// ── TUNE drawer (modeled on Obsidian's graph settings panel). Live sliders for
+// the layout knobs, as pure page UI so it works identically inside any webview.
+// Values persist per device (localStorage); RESET returns to the hand-tuned
+// defaults.
+const U_DEF = { glow: 1, size: 1, linkop: 0.17, repel: 1, dist: 1, spin: 1 };
+const uF = Object.assign({}, U_DEF, JSON.parse(localStorage.getItem('grid-tune-v1') || '{}'));
+const spanel = document.getElementById('spanel');
+const sbtn = document.getElementById('sbtn');
+const SLIDERS = [
+  ['glow',   'GLOW',            0.2,  3,   0.05],
+  ['size',   'NODE SIZE',       0.4,  2.2, 0.05],
+  ['linkop', 'LINK VISIBILITY', 0.03, 0.5, 0.01],
+  ['repel',  'REPEL FORCE',     0.25, 3,   0.05],
+  ['dist',   'LINK DISTANCE',   0.4,  2.5, 0.05],
+  ['spin',   'SPIN',            0,    3,   0.1],
+];
+function applyTune(k) {
+  if ((k === 'size' || !k) && allNodes.length) {
+    for (const n of allNodes) {
+      if (n.__threeObj && n.__baseScale) { const s = n.__baseScale * uF.size; n.__threeObj.scale.set(s, s, s); }
+    }
+  }
+  if (k === 'linkop' || !k) {
+    // set base opacity by hand — the library's linkOpacity() setter rebuilds
+    // link materials and would orphan the trail/selection clones mid-burn
+    for (const l of allLinks) {
+      const o = l.__lineObj;
+      if (!o || trail.includes(l) || selLinks.includes(l)) continue;
+      o.material.transparent = true;
+      o.material.opacity = uF.linkop;
+    }
+  }
+  if (k === 'glow' || !k) {
+    // burning nodes pick the multiplier up per-frame in tick; the blue
+    // selection halo is painted once at select time, so re-paint it live
+    if (sel && sel.__halo && PAL && flareValue(sel, Date.now()) <= 0) {
+      sel.__halo.material.opacity = 0.30 * uF.glow;
+    }
+  }
+  if (k === 'spin' || !k) {
+    controls.autoRotateSpeed = 0.65 * uF.spin;
+    // instant feedback: a camera grab pauses auto-orbit for 15s, which made
+    // the slider look dead — sliding SPIN overrides the pause immediately
+    if (k === 'spin') { controls.autoRotate = uF.spin > 0; userTouchedAt = 0; }
+  }
+  // d3 forces evaluate strength/distance accessors at INITIALIZE only (the
+  // flare-reheat works because it re-SETS .strength). Mutating uF inside the
+  // closure is a cached no-op — the accessor must be re-set to re-init.
+  if (k === 'repel') {
+    graph.d3Force('charge').strength(n => (-24 - (n.mass || 1) * 7) * SPREAD3 * uF.repel);
+    graph.d3ReheatSimulation();
+  }
+  if (k === 'dist') {
+    graph.d3Force('link').distance(l => (rad(l.source) + rad(l.target) + 40) * SPREAD * uF.dist);
+    graph.d3ReheatSimulation();
+  }
+  localStorage.setItem('grid-tune-v1', JSON.stringify(uF));
+}
+for (const [k, name, lo, hi, st] of SLIDERS) {
+  const lab = document.createElement('label');
+  lab.textContent = name;
+  const r = document.createElement('input');
+  r.type = 'range'; r.min = lo; r.max = hi; r.step = st; r.value = uF[k];
+  r.dataset.k = k;
+  r.addEventListener('input', () => { uF[k] = +r.value; applyTune(k); });
+  spanel.appendChild(lab);
+  spanel.appendChild(r);
+}
+const sreset = document.createElement('div');
+sreset.id = 'sreset';
+sreset.textContent = 'RESET';
+sreset.addEventListener('click', () => {
+  Object.assign(uF, U_DEF);
+  spanel.querySelectorAll('input').forEach(r => { r.value = uF[r.dataset.k]; });
+  SLIDERS.forEach(([k]) => applyTune(k));  // per-key: repel/dist need their re-set path
+});
+spanel.appendChild(sreset);
+sbtn.addEventListener('click', () => {
+  const open = spanel.style.display !== 'block';
+  spanel.style.display = open ? 'block' : 'none';
+  sbtn.classList.toggle('on', open);
+});
+applyTune();  // saved spin/linkop apply now; size re-applies post-declone
+
+// nothing that starts on the transport UI may drive the camera. stopPropagation
+// alone can't guarantee that: automation drivers and phones deliver pointer +
+// synthetic mouse trains for one gesture, and the canvas is a sibling, not a
+// descendant. So a gesture that starts here switches OrbitControls OFF until it
+// ends, whatever duplicate events arrive meanwhile.
+for (const el of [rbar, rpanel, spanel]) {
+  // bubble phase, not capture: the stops must run AFTER the children's own
+  // handlers (✕ LIVE, walk rows) and the slider's native drag, then die here
+  for (const t of ['pointerdown', 'mousedown', 'touchstart']) {
+    el.addEventListener(t, e => { e.stopPropagation(); controls.enabled = false; });
+  }
+  for (const t of ['wheel', 'contextmenu', 'click', 'dblclick']) {
+    el.addEventListener(t, e => e.stopPropagation());
+  }
+}
+for (const t of ['pointerup', 'mouseup', 'touchend', 'touchcancel']) {
+  window.addEventListener(t, () => { controls.enabled = true; }, { capture: true });
+}
+
+rbtn.addEventListener('click', () => {
+  if (rpanel.style.display === 'block') closeWalkPanel();
+  else openWalkPanel();
+});
+rplay.addEventListener('click', () => {
+  if (!replay.active) return;
+  if (replay.i >= replay.walk.events.length) {  // walk ended: ▶ restarts it
+    seekReplay(0); rslider.value = 0;
+    replay.playing = true; rplay.textContent = '⏸';
+    return;
+  }
+  replay.playing = !replay.playing;
+  rplay.textContent = replay.playing ? '⏸' : '▶';
+});
+rspeed.addEventListener('click', () => {
+  replay.speed = SPEEDS[(SPEEDS.indexOf(replay.speed) + 1) % SPEEDS.length];
+  rspeed.textContent = replay.speed + '×';
+  if (replay.active) schedule();
+});
+rslider.addEventListener('input', () => { if (replay.active) seekReplay(+rslider.value); });
+document.getElementById('rlive').addEventListener('click', goLive);
+
+let lastScan = 0;
+function tick() {
+  requestAnimationFrame(tick);
+  const now = Date.now(), pnow = performance.now();
+  if (pnow - lastScan > 150) { lastScan = pnow; scanLabels(now); scanGalaxies(); }
+  syncLabels();
+  syncGalaxies();
+
+  if (PAL) {
+    for (const l of trail) {
+      const o = ensureLinkGlow(l);
+      if (!o) continue;
+      const b = Math.min(flareValue(l.source, now), flareValue(l.target, now));
+      o.material.color.copy(PAL.trailCol);
+      o.material.opacity = 0.15 + b * 0.85;
+    }
+    for (let i = ghosts.length - 1; i >= 0; i--) {
+      const g = ghosts[i];
+      const b = Math.min(flareValue(g.a, now), flareValue(g.b, now));
+      if (b < 0.05) { dropGhost(i); continue; }
+      const line = ensureGhostLine(g);
+      if (!line || g.a.x === undefined || g.b.x === undefined) continue;
+      const pos = line.geometry.attributes.position;
+      pos.array[0] = g.a.x; pos.array[1] = g.a.y; pos.array[2] = g.a.z;
+      pos.array[3] = g.b.x; pos.array[4] = g.b.y; pos.array[5] = g.b.z;
+      pos.needsUpdate = true;
+      line.material.color.copy(PAL.trailCol);
+      line.material.opacity = 0.12 + b * 0.55;  // a walked hop, shyer than a real link
+    }
+    for (const n of allNodes) {
+      const o = n.__threeObj;
+      if (!o || !n.__ownMat) continue;
+      const fv = flareValue(n, now);
+      if (fv <= 0 && !n.__wasHot) continue;  // cold and settled: zero work
+      n.__wasHot = fv > 0;
+      o.material.color.copy(PAL.idleCol).lerp(PAL.fireCol, fv);
+      o.material.emissive.copy(PAL.idleEmis).lerp(n.f.isEdit ? PAL.editEmis : PAL.fireEmis, fv);
+      const s = (n.__baseScale || 1) * uF.size * (1 + fv * 0.9);
+      o.scale.set(s, s, s);
+      if (fv > 0.05) {
+        const h = ensureHalo(n);
+        h.visible = true;
+        // halo rides a node already scaled ~1.9x when hot, and it's a clone of
+        // the low-poly sphere, so big scales read as giant faceted blobs. Keep
+        // it a rim, not a cloud: ≤1.7x local, ~3x ball radius total at full flare.
+        h.scale.setScalar(1.25 + fv * 0.45);
+        h.material.opacity = 0.10 * fv * uF.glow;
+        h.material.emissive.copy(PAL.haloEmis);
+        h.material.color.copy(PAL.haloCol);
+      } else if (n.__halo) {
+        n.__halo.visible = false;
+      }
+    }
+  }
+
+  // gently aim at fresh activity, at most every 10s, never while the viewer is
+  // driving, and never in replay (the dive is live-only; !replay.active is the
+  // hard gate even if some path sets camTarget mid-replay)
+  if (!replay.active && camTarget && pnow - lastAim > 10000 && pnow - userTouchedAt > 30000) {
+    lastAim = pnow;
+    const d = 320;
+    const p = camTarget;
+    if (p.x !== undefined) {
+      const len = Math.hypot(p.x, p.y, p.z) || 1;
+      graph.cameraPosition(
+        { x: p.x * (1 + d / len), y: p.y * (1 + d / len), z: p.z * (1 + d / len) },
+        p, 4000,
+      );
+    }
+    camTarget = null;
+  }
+}
+</script>
+</body>
+</html>

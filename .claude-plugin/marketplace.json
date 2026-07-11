@@ -12,6 +12,14 @@
       "description": "Your second brain: an LLM-maintained personal wiki based on Andrej Karpathy's LLM-Wiki pattern. One skill scaffolds the vault; ingest, query, and vault-lint keep it compounding.",
       "category": "productivity",
       "tags": ["second-brain", "knowledge-base", "obsidian", "wiki", "pkm"]
+    },
+    {
+      "name": "trailblaze-grid",
+      "source": "./plugins/grid",
+      "displayName": "The Grid",
+      "description": "A live 3D mind-graph of your Markdown vault, lit in real time as a Claude Code agent reads and edits your notes. Notes are planets, wikilinks are orbits, and the agent's attention walks the graph as a path of light.",
+      "category": "productivity",
+      "tags": ["visualization", "3d", "graph", "obsidian", "second-brain", "observability"]
     }
   ]
 }

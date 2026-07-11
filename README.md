@@ -59,6 +59,13 @@ Then the everyday rhythm:
 | `query` | Wiki-first answers with `[[wikilink]]` citations. Deterministic search and backlink scripts run before any expensive reading |
 | `vault-lint` | Tiered health check (quick / standard / deep). Report-first; fixes only run when you say so |
 
+## Plugins in this repo
+
+This marketplace ships two plugins:
+
+- **Trailblaze** (the four skills above) — build and run the second brain.
+- **[The Grid](plugins/grid/README.md)** — a live 3D mind-graph of your vault that lights up in real time as a Claude Code agent reads and edits your notes. You watch it think. Say "set up the grid" to install.
+
 ## Why this stays cheap
 
 Most agent-maintained knowledge bases die of token cost: the agent re-reads everything, appends forever, and every month the system gets slower and more expensive. Trailblaze ports the cost discipline from a production vault that runs this pattern daily:
