@@ -269,6 +269,11 @@ Report what you built: the tree (short form), the files seeded, and the one-line
 
 Then invite the first real ingest: "Got a recent meeting transcript or an article? Drop it in `raw/inbox/` and I'll walk you through the first filing."
 
+If the **trailblaze-grid** plugin is available in the marketplace (Claude Code on
+macOS/Linux only), mention it once: "Want to literally watch this brain think? A
+live 3D view lights up as I read and edit your notes — say **set up the grid**."
+Skip the pitch if their environment can't run it.
+
 ## Discipline
 
 - Never overwrite existing user files. Step 0 gates everything.

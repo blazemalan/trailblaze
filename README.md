@@ -4,6 +4,10 @@
 
 You feed it sources (meeting transcripts, articles, emails) and ask it questions. The agent does everything else: summarizing, cross-referencing, filing, and keeping it all current. Chat memory forgets; this compounds.
 
+![The Grid: a vault lighting up live as the agent reads and edits notes](plugins/grid/docs/grid-demo.gif)
+
+*Above: [The Grid](plugins/grid/README.md), the optional companion plugin in this repo: your vault as a live 3D galaxy, planets flaring as the agent walks your notes.*
+
 Trailblaze packages the whole system as a Claude plugin: one skill scaffolds your vault, and three more run it day to day.
 
 > **Why "Trailblaze"?** The pattern's ancestor is Vannevar Bush's 1945 Memex, a machine for blazing associative trails between documents. Wikilinks are exactly those trails. This implementation traces back through [Andrej Karpathy's LLM-Wiki idea](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) ([github.com/karpathy](https://github.com/karpathy)), which this plugin is built on.
