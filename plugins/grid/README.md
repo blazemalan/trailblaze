@@ -2,6 +2,10 @@
 
 **A live 3D window into an agent working your vault.**
 
+**Optional extra, not a dependency.** The [Trailblaze](../../README.md) second
+brain works completely without The Grid. Install this only if you want to watch
+the machinery glow.
+
 The Grid renders an Obsidian-style Markdown vault as a galaxy: every note is a
 planet (sized by its links and word count), every `[[wikilink]]` is an orbit.
 Then it lights up in real time — as a Claude Code agent reads and edits notes in

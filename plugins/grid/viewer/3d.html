@@ -25,15 +25,15 @@
   /* bottom UI rides above the iOS home-indicator: env() needs viewport-fit=cover,
      and the coarse-pointer bump covers webviews that report zero insets
      (without it the whole chips row can be swallowed by the home bar) */
-  #status { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom, 0px)); right:16px; z-index:2; width:8px; height:8px; border-radius:50%; background:#555; }
+  #status { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); right:16px; z-index:2; width:8px; height:8px; border-radius:50%; background:#555; }
   #modes {
-    position:absolute; bottom:calc(10px + env(safe-area-inset-bottom, 0px)); left:12px; z-index:4;
+    position:absolute; bottom:calc(10px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); left:12px; z-index:4;
     font:500 10px -apple-system, sans-serif; letter-spacing:3px; color:#2e3f52; user-select:none;
   }
   #modes span { cursor:pointer; padding:8px 7px; color:#51677e; }
   @media (pointer: coarse) {
-    #modes { bottom:calc(26px + env(safe-area-inset-bottom, 0px)); }
-    #status { bottom:calc(30px + env(safe-area-inset-bottom, 0px)); }
+    #modes { bottom:calc(26px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); }
+    #status { bottom:calc(30px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); }
     #modes span { padding:12px 9px; font-size:11px; }
   }
   #modes span.on { color:#d9e6f2; text-shadow:0 0 8px rgba(150,185,215,0.6); }
@@ -42,7 +42,7 @@
   #status.replay { background:#7fb6e8; box-shadow:0 0 8px #7fb6e8aa; }
   #modes span#rbtn.on { color:#ffb27a; text-shadow:0 0 8px rgba(255,106,0,0.55); }
   #rpanel {
-    position:absolute; bottom:calc(44px + env(safe-area-inset-bottom, 0px)); left:12px; z-index:5; display:none;
+    position:absolute; bottom:calc(44px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); left:12px; z-index:5; display:none;
     max-height:46vh; overflow-y:auto; min-width:250px; max-width:360px;
     background:rgba(6,10,16,0.92); border:1px solid rgba(120,160,200,0.18);
     border-radius:6px; padding:5px 0;
@@ -56,7 +56,7 @@
      touch-action:none, so a thumb that misses the slider by a hair can never
      leak the drag into OrbitControls and fling the camera */
   #rbar {
-    position:absolute; bottom:calc(10px + env(safe-area-inset-bottom, 0px)); left:50%; transform:translateX(-50%); z-index:5;
+    position:absolute; bottom:calc(10px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); left:50%; transform:translateX(-50%); z-index:5;
     display:none; align-items:center; gap:12px; padding:13px 20px;
     background:rgba(6,10,16,0.92); border:1px solid rgba(120,160,200,0.18); border-radius:24px;
     font:600 11px -apple-system, sans-serif; color:#9fb6cc; letter-spacing:2px; user-select:none;
@@ -72,8 +72,8 @@
      add no specificity, so source order is what makes these bottoms win */
   @media (pointer: coarse) {
     #rslider { width:150px; }
-    #rbar { max-width:94vw; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); }
-    #rpanel { bottom:calc(74px + env(safe-area-inset-bottom, 0px)); }
+    #rbar { max-width:94vw; bottom:calc(26px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); }
+    #rpanel { bottom:calc(74px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); }
   }
   #g { position:absolute; inset:0; }
   #labels { position:absolute; inset:0; z-index:3; pointer-events:none; }
@@ -93,7 +93,7 @@
   }
   /* TUNE drawer: Obsidian-graph-style sliders, observer-blue accent */
   #spanel {
-    display:none; position:absolute; left:14px; bottom:58px; z-index:6;
+    display:none; position:absolute; left:14px; bottom:calc(58px + var(--vvgap, 0px)); z-index:6;
     background:rgba(5,10,18,0.93); border:1px solid rgba(125,253,254,0.16);
     border-radius:10px; padding:13px 16px 11px; width:225px;
     font:500 10px -apple-system, sans-serif; letter-spacing:2px; color:#7fa3bd;
@@ -101,7 +101,7 @@
   #spanel label { display:block; margin:9px 0 3px; }
   #spanel input[type=range] { width:100%; height:22px; accent-color:#7dfdfe; touch-action:none; cursor:pointer; }
   #spanel #sreset { margin-top:11px; text-align:center; cursor:pointer; color:#7dfdfe; letter-spacing:3px; }
-  @media (pointer: coarse) { #spanel { left:8px; bottom:calc(78px + env(safe-area-inset-bottom, 0px)); } }
+  @media (pointer: coarse) { #spanel { left:8px; bottom:calc(78px + env(safe-area-inset-bottom, 0px) + var(--vvgap, 0px)); } }
 </style>
 </head>
 <body>
@@ -1003,6 +1003,22 @@ function tick() {
     camTarget = null;
   }
 }
+
+// ── visual-viewport fit: Telegram-style webviews report window.innerHeight
+// taller than what's actually visible, so bottom-anchored UI sinks below the
+// fold and the (window-sized) canvas centers the galaxy too low. --vvgap
+// carries the lie into every bottom: calc(); the canvas is resized explicitly
+// only when the gap is real (>40px), so normal browsers keep the library's
+// own auto-sizing untouched.
+const vvFit = () => {
+  const vv = window.visualViewport;
+  const gap = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  document.documentElement.style.setProperty('--vvgap', gap + 'px');
+  if (vv && gap > 40) { graph.width(vv.width); graph.height(vv.height); }
+};
+if (window.visualViewport) window.visualViewport.addEventListener('resize', vvFit);
+window.addEventListener('resize', vvFit);
+vvFit();
 </script>
 </body>
 </html>

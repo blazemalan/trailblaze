@@ -270,9 +270,10 @@ Report what you built: the tree (short form), the files seeded, and the one-line
 Then invite the first real ingest: "Got a recent meeting transcript or an article? Drop it in `raw/inbox/` and I'll walk you through the first filing."
 
 If the **trailblaze-grid** plugin is available in the marketplace (Claude Code on
-macOS/Linux only), mention it once: "Want to literally watch this brain think? A
-live 3D view lights up as I read and edit your notes — say **set up the grid**."
-Skip the pitch if their environment can't run it.
+macOS/Linux only), mention it once: "Totally optional fun extra: a live 3D view
+that lights up as I read and edit your notes. Say **set up the grid** if you want
+it." Make clear the second brain is complete without it, and skip the pitch
+entirely if their environment can't run it.
 
 ## Discipline
 

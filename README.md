@@ -6,7 +6,7 @@ You feed it sources (meeting transcripts, articles, emails) and ask it questions
 
 ![The Grid: a vault lighting up live as the agent reads and edits notes](plugins/grid/docs/grid-demo.gif)
 
-*Above: [The Grid](plugins/grid/README.md), the optional companion plugin in this repo: your vault as a live 3D galaxy, planets flaring as the agent walks your notes.*
+*Above: [The Grid](plugins/grid/README.md), the optional just-for-fun companion plugin in this repo: your vault as a live 3D galaxy, planets flaring as the agent walks your notes. The second brain works fully without it.*
 
 Trailblaze packages the whole system as a Claude plugin: one skill scaffolds your vault, and three more run it day to day.
 
@@ -67,8 +67,8 @@ Then the everyday rhythm:
 
 This marketplace ships two plugins:
 
-- **Trailblaze** (the four skills above) — build and run the second brain.
-- **[The Grid](plugins/grid/README.md)** — a live 3D mind-graph of your vault that lights up in real time as a Claude Code agent reads and edits your notes. You watch it think. Say "set up the grid" to install.
+- **Trailblaze** (the four skills above): build and run the second brain. This is the whole product and it needs nothing else.
+- **[The Grid](plugins/grid/README.md)**: a live 3D mind-graph of your vault that lights up in real time as a Claude Code agent reads and edits your notes. You watch it think. **Totally optional, just a fun extra**: nothing in Trailblaze requires it. Say "set up the grid" to install.
 
 ## Why this stays cheap
 
